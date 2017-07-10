@@ -1,9 +1,7 @@
 #!/usr/bin/python
 
 import numpy as np
-import yaml
 import math
-from operator import itemgetter
 import matplotlib.pyplot as plt
 import pprint
 
@@ -23,6 +21,22 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
         starting with "start" and ending with "end" (each node is in
         metric coordinates)
     """
+    DEBUG = False
+    VISUAL = True
+
+    # Setup Map Visualizations:
+    if VISUAL == True:
+        viz_map=occupancy_map
+        fig = plt.figure(figsize=(12,12))
+        ax = fig.add_subplot(111)
+        ax.set_title('Occupancy Grid')
+        plt.xticks(visible=False)
+        plt.yticks(visible=False)
+        plt.imshow(viz_map, origin='upper', interpolation='none')
+        ax.set_aspect('equal')
+        plt.pause(2)
+
+
     # We will use this delta function to search surrounding nodes.
     delta = [[-1, 0],  # go up
              [0, -1],  # go left
@@ -33,8 +47,9 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
     cost = 1
     # Convert numpy array of map to list of map, makes it easier to search.
     occ_map = occupancy_map.tolist()
-    print "occ_map: "
-    pprint.pprint(occ_map)
+    if DEBUG == True:
+        print "occ_map: "
+        pprint.pprint(occ_map)
 
     # Converge start and goal positions to map indices.
     x = int(math.ceil((start.item(0) / x_spacing) - 0.5))  # startingx
@@ -44,6 +59,8 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
     print "Start Pose: ", x, y
     print "Goal Pose: ", goalX, goalY
 
+
+
     # Make a map to keep track of all the nodes and their cost distance values.
     possible_nodes = [[0 for row in range(len(occ_map[0]))] for col in range(len(occ_map))]
     row = y
@@ -52,10 +69,16 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
     # Show the starting node and goal node.
     # 5 looks similar to S and 6 looks similar to G.
     possible_nodes[row][col] = 5
-    # possible_nodes[goalY][goalX] = 6
 
-    print "Possible Nodes: "
-    pprint.pprint(possible_nodes)
+    if VISUAL == True:
+        viz_map[row][col] = 5
+        viz_map[goalY][goalX] = 6
+        plt.imshow(viz_map, origin='upper', interpolation='none')
+        plt.pause(2)
+
+    if DEBUG == True:
+        print "Possible Nodes: "
+        pprint.pprint(possible_nodes)
 
     # The g_value will count the number of steps each node is from the start.
     # Since we are at the start node, the total cost is 0.
@@ -66,34 +89,39 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
     loopcount = 0
 
     while len(frontier_nodes) != 0:
-        print "\n>>>>>>>>>>>>LOOP COUNT: ", loopcount, "\n"
+        if DEBUG == True:
+            "\n>>>>>>>>>>>>LOOP COUNT: ", loopcount, "\n"
         frontier_nodes.sort(reverse=True) #sort from shortest distance to farthest
         current_node = frontier_nodes.pop()
-        print "current_node: ", current_node
-        print "frontier nodes: ", searched_nodes
+        if DEBUG == True:
+            print "current_node: ", current_node
+            print "frontier nodes: ", searched_nodes
+
         if current_node[1] == goalX and current_node[2] == goalY:
-            print " %%%%%%%%%%%%% Goal found!"
-            print "NEAREST NODE: ", current_node
-            print "searched_nodes: \n", searched_nodes
-            print "\n"
-            print sorted(searched_nodes, key = itemgetter(0))
+            print "Goal found!"
+            if VISUAL == True:
+                plt.text(2, 10, s="Goal found!", fontsize=18, style='oblique', ha='center', va='top')
+                plt.imshow(viz_map, origin='upper', interpolation='none')
+                plt.pause(2)
+
+
             break
         g_value, col, row = current_node
-        print "current g, col, row:", g_value, col, row
 
         # Check surrounding neighbors.
         for i in delta:
             possible_expansion_x = col + i[0]
             possible_expansion_y = row + i[1]
-            print "map dims: ", len(occupancy_map[0]), len(occ_map)
             valid_expansion = 0 <= possible_expansion_y < len(occupancy_map[0]) and 0 <= possible_expansion_x < len(occ_map)
-            print "Current expansion Node: ", possible_expansion_x, possible_expansion_y
+            if DEBUG == True:
+                print "Current expansion Node: ", possible_expansion_x, possible_expansion_y
 
             if valid_expansion:
                 try:
                     unsearched_node = possible_nodes[possible_expansion_y][possible_expansion_x] == 0
                     open_node = occ_map[possible_expansion_y][possible_expansion_x] == 0
-                    print "Check Open or Wall: ", occ_map[possible_expansion_y][possible_expansion_x]
+                    if DEBUG == True:
+                        print "Check Open or Wall: ", occ_map[possible_expansion_y][possible_expansion_x]
                 except:
                     unsearched_node = False
                     open_node = False
@@ -104,13 +132,20 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
                     possible_nodes[possible_expansion_y][possible_expansion_x] = 3
                     possible_node = (g_value + cost, possible_expansion_x, possible_expansion_y)
                     frontier_nodes.append(possible_node)
-                    print "frontier_nodes:", frontier_nodes
+                    if DEBUG == True:
+                        print "frontier_nodes:", frontier_nodes
+                    if VISUAL == True:
+                        viz_map[possible_expansion_y][possible_expansion_x] = 3
+                        plt.imshow(viz_map, origin='upper', interpolation='none')
+                        plt.pause(.5)
+
 
                     # This now builds parent/child relationship
                     parent_node[possible_node] = current_node
-                    print "Parent Node: \n", parent_node
-                    print "While Possible Nodes: "
-                    pprint.pprint(possible_nodes)
+                    if DEBUG == True:
+                        print "Parent Node: \n", parent_node
+                        print "While Possible Nodes: "
+                        pprint.pprint(possible_nodes)
         loopcount = loopcount+1
 
     print "Generating path..."
@@ -123,7 +158,16 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
         route.sort()
 
     #  route back to metric units:
-    print "Route: ", route
+    if DEBUG == True:
+        print "Route: ", route
+    if VISUAL == True:
+        for i in range(0, len(route)):
+            viz_map[route[i][2]][route[i][1]] = 7
+            plt.imshow(viz_map, origin='upper', interpolation='none')
+            plt.pause(.5)
+
+
+
     path = []
     position = [start.item(0), start.item(1)]  # Starting point passed in by function
     path.append(position)  # Add it to the list for the path
@@ -149,47 +193,47 @@ def test():
     """
     Function that provides a few examples of maps and their solution paths
     """
-    test_map1 = np.array([
-              [1, 1, 1, 1, 1, 1, 1, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 0, 0, 0, 0, 0, 0, 1],
-              [1, 1, 1, 1, 1, 1, 1, 1]])
-    x_spacing1 = 0.13
-    y_spacing1 = 0.2
-    start1 = np.array([[0.3], [0.3], [0]])
-    goal1 = np.array([[0.6], [1], [0]])
-    path1 = dijkstras(test_map1,x_spacing1,y_spacing1,start1,goal1)
-    true_path1 = np.array([
-        # [ 0.3  ,  0.3  ],  # [2,1]
-        # [ 0.325,  0.3  ],  # [2,1]
-        # [ 0.325,  0.5  ],  # [2,2]
-        # [ 0.325,  0.7  ],  # [2,3]
-        # [ 0.455,  0.7  ],  # [3,3]
-        # [ 0.455,  0.9  ],  # [3,4]
-        # [ 0.585,  0.9  ],  # [4,4]
-        # [ 0.600,  1.0  ]   # [5,5]
-
-         [0.3, 0.3],
-         [0.325, 0.3],
-         [0.325, 0.5],
-         [0.325, 0.7],
-         [0.325, 0.9],
-         [0.325, 1.1],
-         [0.455, 1.1],
-         [0.585, 1.1],
-         [0.6, 1.0]
-
-    ])
-    if np.array_equal(path1,true_path1):
-      print("Path 1 passes")
-    else:
-        print "nope, chuck testa"
+    # test_map1 = np.array([
+    #           [1, 1, 1, 1, 1, 1, 1, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 0, 0, 0, 0, 0, 0, 1],
+    #           [1, 1, 1, 1, 1, 1, 1, 1]])
+    # x_spacing1 = 0.13
+    # y_spacing1 = 0.2
+    # start1 = np.array([[0.3], [0.3], [0]])
+    # goal1 = np.array([[0.6], [1], [0]])
+    # path1 = dijkstras(test_map1,x_spacing1,y_spacing1,start1,goal1)
+    # true_path1 = np.array([
+    #     # [ 0.3  ,  0.3  ],  # [2,1]
+    #     # [ 0.325,  0.3  ],  # [2,1]
+    #     # [ 0.325,  0.5  ],  # [2,2]
+    #     # [ 0.325,  0.7  ],  # [2,3]
+    #     # [ 0.455,  0.7  ],  # [3,3]
+    #     # [ 0.455,  0.9  ],  # [3,4]
+    #     # [ 0.585,  0.9  ],  # [4,4]
+    #     # [ 0.600,  1.0  ]   # [5,5]
+    #
+    #      [0.3, 0.3],
+    #      [0.325, 0.3],
+    #      [0.325, 0.5],
+    #      [0.325, 0.7],
+    #      [0.325, 0.9],
+    #      [0.325, 1.1],
+    #      [0.455, 1.1],
+    #      [0.585, 1.1],
+    #      [0.6, 1.0]
+    #
+    # ])
+    # if np.array_equal(path1,true_path1):
+    #   print("Path 1 passes")
+    # else:
+    #     print "nope, chuck testa"
 
     test_map2 = np.array([
              [0, 0, 0, 0, 0, 0, 0, 0],
@@ -278,20 +322,8 @@ def test_for_grader():
 
 def main():
     test()
-    # # Load parameters from yaml
-    # param_path = 'params.yaml' # rospy.get_param("~param_path")
-    # f = open('params.yaml','r')
-    # params_raw = f.read()
-    # f.close()
-    # params = yaml.load(params_raw)
-    # # Get params we need
-    # occupancy_map = np.array(params['occupancy_map'])
-    # pos_init = np.array(params['pos_init'])
-    # pos_goal = np.array(params['pos_goal'])
-    # x_spacing = params['x_spacing']
-    # y_spacing = params['y_spacing']
-    # path = dijkstras(occupancy_map,x_spacing,y_spacing,pos_init,pos_goal)
-    # print(path)
+
+
 
 if __name__ == '__main__':
     main()
