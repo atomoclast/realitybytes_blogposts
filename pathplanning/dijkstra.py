@@ -195,7 +195,7 @@ def dijkstras(occupancy_map, x_spacing, y_spacing, start, goal):
 
     else:
         if VISUAL == True:
-            plt.text(2, 10, s="No goal found...", fontsize=18, style='oblique', ha='center', va='top')
+            plt.text(2, 10, s="No path found...", fontsize=18, style='oblique', ha='center', va='top')
             plt.imshow(viz_map, origin='upper', interpolation='none', clim=colormapval)
             plt.pause(5)
         return False
