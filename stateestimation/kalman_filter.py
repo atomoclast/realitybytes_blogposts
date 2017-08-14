@@ -29,50 +29,64 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 '''
 
 import numpy as np
+import matplotlib.pyplot as plt
+import pprint
 
-def kalman_filter(x, P):
-    for n in range(len(measurements)):
-        #measurement update
-        error = np.array(measurements[n]) - H * x
-        print "error: ", error
 
-        residual_covar = H * P * H.transpose() + R
-        print "residual covar: ", residual_covar
+def kalman_filter(x, P, measurement, R, u, Q, F, H):
+    """
+        Implements a basic Kalman Filter Algorithm algorithm
+        Input:
+        x - initial state, [x1, x2, x0_dot, x1_dot]
+        P - Covariance matrix, initial uncertainty
+        measurement, observed position
+        R - Measurement Noise/Uncertainty.
+        u - external motion
+        Q - Motion Noise
+        F - Next State Function
+        H - Measurement Function
+        """
 
-        inv_residual_covar = np.linalg.inv(residual_covar)
-        kgain = P * H.transpose() * inv_residual_covar #kalman gain
-        print "Kalman Gain: ", kgain
 
-        x = x + kgain * error
-        print "x measure: ", x
+    # Update:
 
-        P = (np.eye(2) - kgain * H) * P
-        print "P measure: ", P
+    y = np.matrix(measurement).transpose() - H * x
+    S = H * P * H.transpose() + R  # residual convariance
+    K_t = P * H.transpose() * S.I  # Kalman gain
+    x = x + K_t*y  #state update estimate
+    I = np.matrix(np.eye(F.shape[0])) # identity matrix
+    P = (I - K_t*H)*P
 
-        # prediction
-        x = F * x + u
-        print "x predict: ", x
-
-        P = F * P * F.transpose()
-        print "P predict: ", P
+    # Predict:
+    x = F*x + u
+    P = F*P*F.transpose() + Q
 
     return x, P
 
+if __name__ == "__main__":
+    x = np.matrix([0, 0, 0, 0]).transpose()  # Initial state, at (0,0), at rest.
+    P = np.matrix(np.eye(4))*1000  # initial uncertainty
+    F = np.matrix([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]])
+    H = np.matrix([[1, 0, 0, 0], [0, 1, 0, 0]])
+    u = np.matrix([[0, 0, 0, 0]]).transpose()
+    Q = np.eye(4)
+    R = 0.01 ** 2
 
+    N = 20
+    true_x = np.linspace(0.0, 50.0, N)
+    true_y = true_x*2
+    sensed_x = true_x + 0.05*np.random.random(N)*true_x
+    sensed_y = true_y + 0.05*np.random.random(N)*true_y
+    plt.plot(sensed_x, sensed_y, 'ro', label = 'Noisy Measurements.')
+    result = []
+    for measurements in zip(sensed_x, sensed_y):
+        x, P = kalman_filter(x, P, measurements, R, u, Q, F, H)
+        result.append((x[:2]).tolist())
+    kalman_x, kalman_y = zip(*result)
+    plt.plot(kalman_x, kalman_y, 'b-', label='Kalman Estimate')
+    plt.title("Kalman Filtering")
+    plt.legend(loc='upper left')
+    plt.show()
 
+print "Plotted"
 
-#Test Main: 
-measurements = np.array([1, 2, 3])
-
-#Initial State [location, velocity], 2x1?
-x = np.matrix([[0], [0]])
-P = np.matrix([[1000., 0.], [0., 1000.]])  # initial uncertainty
-u = np.matrix([[0.], [0.]])  # external motion
-F = np.matrix([[1., 1.], [0, 1.]])  # next state function
-H = np.matrix([[1., 0.]])  # measurement function
-R = np.matrix([[1.]])  # measurement uncertainty
-
-print kalman_filter(x, P)
-# output should be:
-# x: [[3.9996664447958645], [0.9999998335552873]]
-# P: [[2.3318904241194827, 0.9991676099921091], [0.9991676099921067, 0.49950058263974184]]
