@@ -1,0 +1,9 @@
+<launch>
+	<!-- Launch  mapping nodes: -->
+	<include file="$(find turtlebot_navigation)/launch/gmapping_demo.launch"/>
+
+	<!-- Launch RVIZ Viewer -->
+	<include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
+
+
+</launch>
