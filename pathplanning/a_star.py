@@ -28,23 +28,36 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-import numpy as np
-import math
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
 COLOR_MAP = (0, 8)
 
+
 class PathPlanner:
 
     def __init__(self, grid, visual=False):
+        """
+        Constructor of the PathPlanner Class.
+        :param grid: List of lists that represents the
+        occupancy map/grid. List should only contain 0's
+        for open nodes and 1's for obstacles/walls.
+        :param visual: Boolean to determine if Matplotlib
+        animation plays while path is found.
+        """
         self.grid = grid
+        self.visual = visual
         self.heuristic = None
         self.goal_node = None
-        self.start_node = None
-        self.visual = visual
 
     def calc_heuristic(self):
+        """
+        Function will create a list of lists the same size
+        of the occupancy map, then calculate the cost from the
+        goal node to every other node on the map and update the
+        class member variable self.heuristic.
+        :return: None.
+        """
         row = len(self.grid)
         col = len(self.grid[0])
 
@@ -55,12 +68,19 @@ class PathPlanner:
                 col_diff = abs(j - self.goal_node[1])
                 self.heuristic[i][j] = int(abs(row_diff - col_diff) + min(row_diff, col_diff) * 2)
 
+        print "Heuristic:"
+        for i in range(len(self.heuristic)):
+            print self.heuristic[i]
+
     def a_star(self, start_cart, goal_cart):
         """
-
-        :param init:
-        :param goal:
-        :return:
+        A* Planner method. Finds a plan from a starting node
+        to a goal node if one exits.
+        :param init: Initial node in an Occupancy map. [x, y].
+        Type: List of Ints.
+        :param goal: Goal node in an Occupancy map. [x, y].
+        Type: List of Ints.
+        :return: Found path or -1 if it fails.
         """
         goal = [goal_cart[1], goal_cart[0]]
         self.goal_node = goal
@@ -85,14 +105,13 @@ class PathPlanner:
             plt.imshow(viz_map, origin='upper', interpolation='none', clim=COLOR_MAP)
             plt.pause(2)
 
-        # Different options:
+        # Different move/search direction options:
 
         delta = [[-1, 0],  # go up
                  [0, -1],  # go left
                  [1, 0],  # go down
                  [0, 1]]  # go right
         delta_name = ['^ ', '< ', 'v ', '> ']
-
 
         # If you wish to use diagonals:
         # delta = [[-1, 0],  # go up
@@ -104,6 +123,8 @@ class PathPlanner:
         #          [-1, 1],  # upper right
         #          [1, 1]]  # lower right
         # delta_name = ['^ ', '< ', 'v ', '> ', 'UL', 'LL', 'UR', 'LR']
+
+        # Heavily used from some of the A* Examples by Sebastian Thrun:
 
         closed = [[0 for col in range(len(self.grid[0]))] for row in range(len(self.grid))]
         shortest_path = [['  ' for _ in range(len(self.grid[0]))] for _ in range(len(self.grid))]
@@ -162,8 +183,6 @@ class PathPlanner:
                                     viz_map[x2][y2] = 3
                                     plt.imshow(viz_map, origin='upper', interpolation='none', clim=COLOR_MAP)
                                     plt.pause(.5)
-
-
 
         current_x = goal[0]
         current_y = goal[1]
@@ -225,6 +244,8 @@ if __name__ == '__main__':
     # test_start = [2, 4]  #  [x, y]
     # test_goal =  [6, 11]  # [x, y]
 
+    # Create an instance of the PathPlanner class:
     test_planner = PathPlanner(test_grid, True)
 
+    # Plan a path.
     test_planner.a_star(test_start, test_goal)
